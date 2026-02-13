@@ -8,6 +8,11 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   run_benchmarks:
     environment: benchmarks
@@ -104,3 +109,25 @@ jobs:
   
             git push origin main
           '"
+
+      - name: Comment on PR with benchmark run link
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = Number('${{ inputs.pr_number }}');
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const status = '${{ job.status }}';
+
+            const body = [
+              `Benchmarks finished with **${status}**.`,
+              ``,
+              `Workflow run: ${runUrl}`
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body
+            });
